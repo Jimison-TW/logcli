@@ -22,4 +22,13 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "mypy>=2.3.0",
+    "ruff>=0.15.22",
 ]
+
+[tool.ruff]
+line-length = 100          # 一行最多幾字元
+src = ["src"]              # 告訴 ruff 套件在 src/ 底下，import 排序才會正確
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]   # E=pycodestyle 錯誤, F=pyflakes(未使用變數/import), I=isort(import 排序)
+
