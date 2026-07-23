@@ -72,10 +72,10 @@ if __name__ == "__main__":
         try:
             record = parse_line(line)
             logger.debug("%s", record)
-            success = success + 1
+            success += 1
         except LogParseError as e:
             logger.warning("%s", e)  # 給使用者：乾淨一行
             logger.debug("解析失敗細節", exc_info=True)  # 給開發者：--verbose 才看得到 traceback
-            failed = failed + 1
+            failed += 1
 
     logger.info("parse success: %s, failed: %s", success, failed)
