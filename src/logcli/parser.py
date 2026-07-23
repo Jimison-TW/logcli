@@ -1,7 +1,12 @@
+import logging
+import os
 from collections import Counter
 from datetime import datetime
 
+from .logging_config import setup_logging
 from .models import LogRecord
+
+logger = logging.getLogger(__name__)
 
 
 class LogParseError(Exception):
@@ -35,22 +40,25 @@ def count_levels(lines: list[str]) -> Counter[str]:
 
 
 def parse_line(line: str) -> LogRecord:
+    parts = line.split(" ", 2)
+    if len(parts) < 3:
+        raise LogParseError(raw=line, reason="訊息字串缺少錯誤內容")
+    time = parts[0]
+    level = parts[1]
+    reason = parts[2]
     try:
-        parts = line.split(" ", 2)
-        if len(parts) < 3:
-            raise LogParseError(raw=line, reason="訊息字串缺少錯誤內容")
-        time = parts[0]
-        level = parts[1]
-        reason = parts[2]
         format_time = datetime.fromisoformat(time)
-        if level not in ("INFO", "WARN", "ERROR"):
-            raise LogParseError(raw=line, reason="level 不在 INFO/WARN/ERROR 之內")
-        return LogRecord(timestamp=format_time, level=level, message=reason)
     except ValueError as e:
         raise LogParseError(raw=line, reason="timestamp 格式錯誤") from e
+    if level not in ("INFO", "WARN", "ERROR"):
+        raise LogParseError(raw=line, reason="level 不在 INFO/WARN/ERROR 之內")
+    return LogRecord(timestamp=format_time, level=level, message=reason)
 
 
 if __name__ == "__main__":
+    verbose_enable = os.environ.get("LOGCLI_VERBOSE")
+    setup_logging(verbose=verbose_enable)
+
     tests = [
         "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",  # ✅ 正常:訊息含空格也要完整保留
         "2026-07-22T10:00:00 CRITICAL 等級不存在",  # ❌ level 不合法
@@ -58,9 +66,16 @@ if __name__ == "__main__":
         "只有兩段 INFO",  # ❌ 缺欄位(切不出三段)
         "onlyoneword",  # ❌ 缺欄位(只有一段)
     ]
+    success = 0
+    failed = 0
     for line in tests:
         try:
             record = parse_line(line)
-            print("OK  ->", record)
+            logger.debug("%s", record)
+            success = success + 1
         except LogParseError as e:
-            print("FAIL->", e)
+            logger.warning("%s", e)  # 給使用者：乾淨一行
+            logger.debug("解析失敗細節", exc_info=True)  # 給開發者：--verbose 才看得到 traceback
+            failed = failed + 1
+
+    logger.info("parse success: %s, failed: %s", success, failed)
