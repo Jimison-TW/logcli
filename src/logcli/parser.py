@@ -56,7 +56,7 @@ def parse_line(line: str) -> LogRecord:
 
 
 if __name__ == "__main__":
-    verbose_enable = os.environ.get("LOGCLI_VERBOSE")
+    verbose_enable = os.environ.get("LOGCLI_VERBOSE", "").lower() in ("1", "true", "yes")
     setup_logging(verbose=verbose_enable)
 
     tests = [
