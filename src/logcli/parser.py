@@ -1,5 +1,5 @@
+import argparse
 import logging
-import os
 from collections import Counter
 from datetime import datetime
 
@@ -55,22 +55,29 @@ def parse_line(line: str) -> LogRecord:
     return LogRecord(timestamp=format_time, level=level, message=reason)
 
 
-if __name__ == "__main__":
-    verbose_enable = os.environ.get("LOGCLI_VERBOSE", "").lower() in ("1", "true", "yes")
-    setup_logging(verbose=verbose_enable)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="解析錯誤訊息")
+    parser.add_argument("-v", "--verbose", action="store_true", help="開 DEBUG log")
 
-    tests = [
-        "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",  # ✅ 正常:訊息含空格也要完整保留
-        "2026-07-22T10:00:00 CRITICAL 等級不存在",  # ❌ level 不合法
-        "not-a-time ERROR 時間格式壞掉",  # ❌ timestamp 壞 → 要 from e 鏈
-        "只有兩段 INFO",  # ❌ 缺欄位(切不出三段)
-        "onlyoneword",  # ❌ 缺欄位(只有一段)
-    ]
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub_parse = sub.add_parser("parse", help="要讀取的檔案目錄路徑")
+    sub_parse.add_argument("file", help="log 檔路徑")
+    sub_parse.add_argument("--level", choices=["INFO", "WARN", "ERROR"], help="只看某個等級")
+
+    lines = []
+    args = parser.parse_args()
+    level = args.level
+    setup_logging(verbose=args.verbose)
+    with open(args.file, encoding="utf-8") as f:
+        lines = f.read().splitlines()  # 每行一個字串、去掉換行
+
     success = 0
     failed = 0
-    for line in tests:
+    for line in lines:
         try:
             record = parse_line(line)
+            if record.level != level and level is not None:
+                continue
             logger.debug("%s", record)
             success += 1
         except LogParseError as e:
@@ -79,3 +86,14 @@ if __name__ == "__main__":
             failed += 1
 
     logger.info("parse success: %s, failed: %s", success, failed)
+
+
+if __name__ == "__main__":
+    main()
+    # tests = [
+    #     "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",  # ✅ 正常:訊息含空格也要完整保留
+    #     "2026-07-22T10:00:00 CRITICAL 等級不存在",  # ❌ level 不合法
+    #     "not-a-time ERROR 時間格式壞掉",  # ❌ timestamp 壞 → 要 from e 鏈
+    #     "只有兩段 INFO",  # ❌ 缺欄位(切不出三段)
+    #     "onlyoneword",  # ❌ 缺欄位(只有一段)
+    # ]
