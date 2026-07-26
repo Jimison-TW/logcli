@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 from collections import Counter
 from datetime import datetime
@@ -63,13 +64,20 @@ def main() -> None:
     sub_parse = sub.add_parser("parse", help="要讀取的檔案目錄路徑")
     sub_parse.add_argument("file", help="log 檔路徑")
     sub_parse.add_argument("--level", choices=["INFO", "WARN", "ERROR"], help="只看某個等級")
+    sub_parse.add_argument("--top", type=int, help="顯示最常見的前 N 個")
+    sub_parse.add_argument("--json", action="store_true", help="把統計結果以 JSON 印出來")
 
     lines = []
     args = parser.parse_args()
     level = args.level
+    top_count = args.top
+    with_json = args.json
     setup_logging(verbose=args.verbose)
     with open(args.file, encoding="utf-8") as f:
         lines = f.read().splitlines()  # 每行一個字串、去掉換行
+
+    if top_count is not None or with_json:
+        show_top_n(lines, top_count=top_count, with_json=with_json)
 
     success = 0
     failed = 0
@@ -86,6 +94,16 @@ def main() -> None:
             failed += 1
 
     logger.info("parse success: %s, failed: %s", success, failed)
+
+
+def show_top_n(data: list[str], top_count: int | None, with_json: bool) -> None:
+    counter = count_levels(data)
+    common = counter.most_common(top_count)
+    if with_json:
+        print(json.dumps(common))
+    else:
+        for level, count in common:
+            print(f"{level}: {count}")
 
 
 if __name__ == "__main__":
