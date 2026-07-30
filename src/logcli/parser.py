@@ -56,6 +56,13 @@ def parse_line(line: str) -> LogRecord:
     return LogRecord(timestamp=format_time, level=level, message=reason)
 
 
+def read_lines(path: str) -> list[str]:
+    lines = []
+    with open(path, encoding="utf-8") as f:
+        lines = f.read().splitlines()  # 每行一個字串、去掉換行
+    return lines
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="解析錯誤訊息")
     parser.add_argument("-v", "--verbose", action="store_true", help="開 DEBUG log")
@@ -73,8 +80,7 @@ def main() -> None:
     top_count = args.top
     with_json = args.json
     setup_logging(verbose=args.verbose)
-    with open(args.file, encoding="utf-8") as f:
-        lines = f.read().splitlines()  # 每行一個字串、去掉換行
+    lines = read_lines(args.file)
 
     if top_count is not None or with_json:
         show_top_n(lines, top_count=top_count, with_json=with_json)
