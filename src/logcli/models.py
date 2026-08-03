@@ -14,9 +14,12 @@ class LogStats(BaseModel):
         return self.error_count / self.total if self.total else 0.0
 
 
+Level = Literal["INFO", "WARN", "ERROR"]
+
+
 class LogRecord(BaseModel):
     timestamp: datetime
-    level: Literal["INFO", "WARN", "ERROR"]
+    level: Level
     message: str
 
 

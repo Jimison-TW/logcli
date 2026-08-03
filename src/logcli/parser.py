@@ -3,9 +3,10 @@ import json
 import logging
 from collections import Counter
 from datetime import datetime
+from typing import TypeIs, get_args
 
 from .logging_config import setup_logging
-from .models import LogRecord
+from .models import Level, LogRecord
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,10 @@ def count_levels(lines: list[str]) -> Counter[str]:
     return Counter(level for line in lines if (level := extract_level(line)) is not None)
 
 
+def is_legal_level(s: str) -> TypeIs[Level]:
+    return s in get_args(Level)
+
+
 def parse_line(line: str) -> LogRecord:
     parts = line.split(" ", 2)
     if len(parts) < 3:
@@ -51,7 +56,7 @@ def parse_line(line: str) -> LogRecord:
         format_time = datetime.fromisoformat(time)
     except ValueError as e:
         raise LogParseError(raw=line, reason="timestamp 格式錯誤") from e
-    if level not in ("INFO", "WARN", "ERROR"):
+    if not is_legal_level(level):
         raise LogParseError(raw=line, reason="level 不在 INFO/WARN/ERROR 之內")
     return LogRecord(timestamp=format_time, level=level, message=reason)
 
