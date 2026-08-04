@@ -58,6 +58,12 @@ def test_read_lines(sample_log_file):
     assert len(result) == 2
 
 
+def test_read_lines_missing(tmp_path):
+    missing = tmp_path / "nope.log"
+    with pytest.raises(FileNotFoundError):
+        read_lines(missing)
+
+
 def test_read_lines_empty(tmp_path):
     empty = tmp_path / "empty.log"  # ← 在目錄底下指定一個檔名
     empty.write_text("", encoding="utf-8")  # ← 造出這個檔,內容你想想「空」是什麼

@@ -3,6 +3,7 @@ import json
 import logging
 from collections import Counter
 from datetime import datetime
+from pathlib import Path
 from typing import TypeIs, get_args
 
 from .logging_config import setup_logging
@@ -61,11 +62,17 @@ def parse_line(line: str) -> LogRecord:
     return LogRecord(timestamp=format_time, level=level, message=reason)
 
 
-def read_lines(path: str) -> list[str]:
-    lines = []
-    with open(path, encoding="utf-8") as f:
-        lines = f.read().splitlines()  # 每行一個字串、去掉換行
-    return lines
+def read_lines(path: Path) -> list[str]:
+    if path.exists() and path.is_file():
+        lines = path.read_text(encoding="utf-8").splitlines()
+        return lines
+    elif not path.exists():
+        raise FileNotFoundError(path)
+    elif not path.is_file():
+        raise FileExistsError()
+    return []
+    # with open(path, encoding="utf-8") as f:
+    #     lines = f.read().splitlines()  # 每行一個字串、去掉換行
 
 
 def main() -> None:
@@ -74,7 +81,7 @@ def main() -> None:
 
     sub = parser.add_subparsers(dest="command", required=True)
     sub_parse = sub.add_parser("parse", help="要讀取的檔案目錄路徑")
-    sub_parse.add_argument("file", help="log 檔路徑")
+    sub_parse.add_argument("file", help="log 檔路徑", type=Path)
     sub_parse.add_argument("--level", choices=["INFO", "WARN", "ERROR"], help="只看某個等級")
     sub_parse.add_argument("--top", type=int, help="顯示最常見的前 N 個")
     sub_parse.add_argument("--json", action="store_true", help="把統計結果以 JSON 印出來")
