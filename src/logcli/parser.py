@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 import logging
 from collections import Counter
@@ -75,6 +76,14 @@ def read_lines(path: Path) -> list[str]:
     #     lines = f.read().splitlines()  # 每行一個字串、去掉換行
 
 
+def write_csv_report(data: list[str], output: Path) -> None:
+    counter = count_levels(data)
+    with output.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["level", "count"])
+        writer.writerows(sorted(counter.items()))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="解析錯誤訊息")
     parser.add_argument("-v", "--verbose", action="store_true", help="開 DEBUG log")
@@ -85,14 +94,19 @@ def main() -> None:
     sub_parse.add_argument("--level", choices=["INFO", "WARN", "ERROR"], help="只看某個等級")
     sub_parse.add_argument("--top", type=int, help="顯示最常見的前 N 個")
     sub_parse.add_argument("--json", action="store_true", help="把統計結果以 JSON 印出來")
+    sub_parse.add_argument("--output", type=Path, help="把統計結果寫成 CSV 檔")
 
     lines = []
     args = parser.parse_args()
     level = args.level
     top_count = args.top
     with_json = args.json
+    out_csv = args.output
     setup_logging(verbose=args.verbose)
     lines = read_lines(args.file)
+
+    if out_csv is not None:
+        write_csv_report(lines, out_csv)
 
     if top_count is not None or with_json:
         show_top_n(lines, top_count=top_count, with_json=with_json)

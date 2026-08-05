@@ -2,7 +2,7 @@ from collections import Counter
 
 import pytest
 
-from logcli.parser import count_levels, extract_level, read_lines
+from logcli.parser import count_levels, extract_level, read_lines, write_csv_report
 
 
 @pytest.mark.parametrize(
@@ -69,3 +69,15 @@ def test_read_lines_empty(tmp_path):
     empty.write_text("", encoding="utf-8")  # ← 造出這個檔,內容你想想「空」是什麼
     result = read_lines(empty)  # ← 讀「檔」,不是讀「目錄」
     assert result == []
+
+
+def test_write_csv(tmp_path):
+    out = tmp_path / "out.csv"
+    rows = [
+        "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",
+        "2026-07-22T10:00:00 CRITICAL 等級不存在",
+    ]
+    write_csv_report(rows, out)
+    lines = out.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == "level,count"
+    assert lines[1] == "ERROR,1"
