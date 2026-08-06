@@ -1,8 +1,15 @@
 from collections import Counter
 
 import pytest
+from openpyxl import load_workbook
 
-from logcli.parser import count_levels, extract_level, read_lines, write_csv_report
+from logcli.parser import (
+    count_levels,
+    extract_level,
+    read_lines,
+    write_csv_report,
+    write_excel_report,
+)
 
 
 @pytest.mark.parametrize(
@@ -81,3 +88,17 @@ def test_write_csv(tmp_path):
     lines = out.read_text(encoding="utf-8").splitlines()
     assert lines[0] == "level,count"
     assert lines[1] == "ERROR,1"
+
+
+def test_write_xlsx(tmp_path):
+    out = tmp_path / "out.xlsx"
+    rows = [
+        "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",
+        "2026-07-22T10:00:00 CRITICAL 等級不存在",
+    ]
+    write_excel_report(data=rows, output=out)
+    wb = load_workbook(out)
+    ws = wb.active
+    all_rows = list(ws.iter_rows(values_only=True))
+    assert all_rows[0] == ("level", "count")
+    assert all_rows[1] == ("ERROR", 1)

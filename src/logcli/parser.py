@@ -7,6 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TypeIs, get_args
 
+from openpyxl import Workbook
+
 from .logging_config import setup_logging
 from .models import Level, LogRecord
 
@@ -76,12 +78,26 @@ def read_lines(path: Path) -> list[str]:
     #     lines = f.read().splitlines()  # 每行一個字串、去掉換行
 
 
+def build_rows(data: list[str]) -> list[tuple[str, int]]:
+    return sorted(count_levels(data).items())
+
+
 def write_csv_report(data: list[str], output: Path) -> None:
-    counter = count_levels(data)
     with output.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["level", "count"])
-        writer.writerows(sorted(counter.items()))
+        writer.writerows(build_rows(data))
+
+
+def write_excel_report(data: list[str], output: Path) -> None:
+    wb = Workbook()
+    ws = wb.active  # ← 用預設那張,不要 create_sheet()
+    assert ws is not None  # 預設一定有,但堵住 Worksheet|None 的型別/None 疑慮
+    ws.title = "logcli"  # 幫它改名(不是多開一張)
+    ws.append(["level", "count"])
+    for item in build_rows(data):
+        ws.append(item)
+    wb.save(output)
 
 
 def main() -> None:
@@ -101,12 +117,17 @@ def main() -> None:
     level = args.level
     top_count = args.top
     with_json = args.json
-    out_csv = args.output
+    out_path: Path | None = args.output
     setup_logging(verbose=args.verbose)
     lines = read_lines(args.file)
 
-    if out_csv is not None:
-        write_csv_report(lines, out_csv)
+    if out_path is not None:
+        if out_path.suffix == ".csv":
+            write_csv_report(lines, out_path)
+        elif out_path.suffix == ".xlsx":
+            write_excel_report(lines, out_path)
+        else:
+            ValueError(f"不支援的輸出格式:{out_path.suffix}(只支援 .csv / .xlsx)")
 
     if top_count is not None or with_json:
         show_top_n(lines, top_count=top_count, with_json=with_json)
