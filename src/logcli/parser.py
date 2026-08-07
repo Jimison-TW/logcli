@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import logging
+import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +14,13 @@ from .logging_config import setup_logging
 from .models import Level, LogRecord
 
 logger = logging.getLogger(__name__)
+LOG_PATTERN = re.compile(
+    r"(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})"  # 時間戳
+    r" (?P<level>\w+)"  # 空格 + 等級
+    r"( \[(?P<ip>[\d.]+)\])?"  # 可選:空格 + [IP]
+    r"( code=(?P<code>\w\d{4}))?"  # 可選:空格 + code=
+    r" (?P<message>.+)"  # 空格 + 訊息(剩下全部)
+)
 
 
 class LogParseError(Exception):
@@ -98,6 +106,27 @@ def write_excel_report(data: list[str], output: Path) -> None:
     for item in build_rows(data):
         ws.append(item)
     wb.save(output)
+
+
+def extract_fields(log: str) -> LogRecord:
+    m = LOG_PATTERN.search(log)
+    if m is None:
+        raise LogParseError(raw=log, reason="找不到符合的欄位")
+    level = m.group("level")
+    if not is_legal_level(level):
+        raise LogParseError(raw=log, reason="level 不合法")
+    # 這行之後 mypy 就把 level 從 str 縮成 Level 了(TypeIs)
+    try:
+        f_time = datetime.fromisoformat(m.group("timestamp"))
+        return LogRecord(
+            timestamp=f_time,
+            level=level,
+            message=m.group("message"),
+            ip=m.group("ip"),
+            code=m.group("code"),
+        )
+    except ValueError as e:
+        raise LogParseError(raw=log, reason="timestamp 格式錯誤") from e
 
 
 def main() -> None:

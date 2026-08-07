@@ -21,6 +21,8 @@ class LogRecord(BaseModel):
     timestamp: datetime
     level: Level
     message: str
+    ip: str | None = None
+    code: str | None = None
 
 
 if __name__ == "__main__":  # ≈ 「這個檔案被直接執行時才跑」，之後會細講
