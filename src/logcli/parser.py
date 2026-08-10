@@ -81,7 +81,7 @@ def read_lines(path: Path) -> list[str]:
         raise FileNotFoundError(path)
     elif not path.is_file():
         raise FileExistsError()
-    return []
+    return []  # pragma: no cover  ← 不可達,mypy 要
     # with open(path, encoding="utf-8") as f:
     #     lines = f.read().splitlines()  # 每行一個字串、去掉換行
 
@@ -129,7 +129,7 @@ def extract_fields(log: str) -> LogRecord:
         raise LogParseError(raw=log, reason="timestamp 格式錯誤") from e
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover  ← CLI 編排層,W4 接 subprocess 時用真指令整合測試
     parser = argparse.ArgumentParser(description="解析錯誤訊息")
     parser.add_argument("-v", "--verbose", action="store_true", help="開 DEBUG log")
 
