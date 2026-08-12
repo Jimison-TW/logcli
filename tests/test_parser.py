@@ -92,10 +92,11 @@ def test_read_lines_empty(tmp_path):
 
 def test_write_csv(tmp_path):
     out = tmp_path / "out.csv"
-    rows = [
-        "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",
-        "2026-07-22T10:00:00 CRITICAL 等級不存在",
-    ]
+    # rows = [
+    #     "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",
+    #     "2026-07-22T10:00:00 CRITICAL 等級不存在",
+    # ]
+    rows = [("ERROR", 1), ("CRITICAL", 1)]
     write_csv_report(rows, out)
     lines = out.read_text(encoding="utf-8").splitlines()
     assert lines[0] == "level,count"
@@ -104,13 +105,15 @@ def test_write_csv(tmp_path):
 
 def test_write_xlsx(tmp_path):
     out = tmp_path / "out.xlsx"
-    rows = [
-        "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",
-        "2026-07-22T10:00:00 CRITICAL 等級不存在",
-    ]
-    write_excel_report(data=rows, output=out)
+    # rows = [
+    #     "2026-07-22T10:00:00 ERROR 資料庫 連線 失敗",
+    #     "2026-07-22T10:00:00 CRITICAL 等級不存在",
+    # ]
+    rows = [("ERROR", 1), ("CRITICAL", 1)]
+    write_excel_report(rows=rows, output=out)
     wb = load_workbook(out)
     ws = wb.active
+    assert ws is not None
     all_rows = list(ws.iter_rows(values_only=True))
     assert all_rows[0] == ("level", "count")
     assert all_rows[1] == ("ERROR", 1)
@@ -176,19 +179,20 @@ def test_error_rate_zero_total():
 
 
 def test_show_top_n_plain(capsys):
-    rows = [
-        "2026-07-22T10:00:00 ERROR 資料庫連線失敗",
-        "2026-07-22T10:00:00 ERROR 磁碟寫入失敗",
-        "2026-07-22T10:00:00 WARN 記憶體偏高",
-    ]
-
-    show_top_n(rows, top_count=None, with_json=False)
+    # rows = [
+    #     "2026-07-22T10:00:00 ERROR 資料庫連線失敗",
+    #     "2026-07-22T10:00:00 ERROR 磁碟寫入失敗",
+    #     "2026-07-22T10:00:00 WARN 記憶體偏高",
+    # ]
+    counter = Counter({"ERROR": 2, "WARN": 1})
+    show_top_n(counter, top_count=None, with_json=False)
     captured = capsys.readouterr()
     assert captured.out == "ERROR: 2\n" + "WARN: 1\n"  # ← 你來填
 
 
 def test_show_top_n_json(capsys):
-    show_top_n(["2026-07-22T10:00:00 ERROR x"], top_count=None, with_json=True)
+    counter = Counter({"ERROR": 1})
+    show_top_n(counter, top_count=None, with_json=True)
     captured = capsys.readouterr()
     assert captured.out == '[["ERROR", 1]]\n'
 
@@ -196,9 +200,11 @@ def test_show_top_n_json(capsys):
 """
 logging.basicConfig() 有一條隱藏規則:如果 root logger「已經有 handler」,它就什麼都不做(no-op)。
 
-而 pytest 為了攔截 log,啟動時早就往 root logger 塞了自己的 handler。所以你的 setup_logging 一呼叫 basicConfig,它看到「已經有 handler 了」→ 直接擺爛、連 level 都沒設 → root 維持 WARNING → 斷言炸。
+而 pytest 為了攔截 log,啟動時早就往 root logger 塞了自己的 handler。所以你的 setup_logging 一呼叫 
+basicConfig,它看到「已經有 handler 了」→ 直接擺爛、連 level 都沒設 → root 維持 WARNING → 斷言炸。
 
-這是面試等級的坑:basicConfig 是「一次性、且只在乾淨狀態下生效」的。你在 production 沒踩到,是因為 CLI 啟動時 root 還是乾淨的;一進 pytest 環境就現形。
+這是面試等級的坑:basicConfig 是「一次性、且只在乾淨狀態下生效」的。你在 production 沒踩到,是因為 CLI
+啟動時 root 還是乾淨的;一進 pytest 環境就現形。
 """
 # def test_setup_logging_verbose():
 #     setup_logging(verbose=True)

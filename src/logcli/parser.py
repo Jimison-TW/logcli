@@ -103,21 +103,20 @@ def build_rows(data: Counter[str]) -> list[tuple[str, int]]:
     return sorted(data.items())
 
 
-def write_csv_report(stats: Counter[str], output: Path) -> None:
+def write_csv_report(rows: list[tuple[str, int]], output: Path) -> None:
     with output.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["level", "count"])
-        rows = build_rows(stats)
         writer.writerows(rows)
 
 
-def write_excel_report(stats: Counter[str], output: Path) -> None:
+def write_excel_report(rows: list[tuple[str, int]], output: Path) -> None:
     wb = Workbook()
     ws = wb.active  # ← 用預設那張,不要 create_sheet()
     assert ws is not None  # 預設一定有,但堵住 Worksheet|None 的型別/None 疑慮
     ws.title = "logcli"  # 幫它改名(不是多開一張)
     ws.append(["level", "count"])
-    for item in stats:
+    for item in rows:
         ws.append(item)
     wb.save(output)
 
