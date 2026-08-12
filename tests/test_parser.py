@@ -1,4 +1,5 @@
 import logging
+import subprocess
 from collections import Counter
 
 import pytest
@@ -11,6 +12,7 @@ from logcli.parser import (
     count_levels,
     extract_fields,
     extract_level,
+    main,
     parse_line,
     read_lines,
     show_top_n,
@@ -220,3 +222,28 @@ def test_setup_logging_verbose():
         assert root.level == logging.DEBUG  # 現在 basicConfig 真的生效了
     finally:
         root.handlers[:] = original  # ③ 還原:不管測試過不過都復原,不污染其他測試
+
+
+def test_cli_end_to_end(tmp_path):
+    log = tmp_path / "test.log"
+    log.write_text(
+        "2026-07-22T10:00:00 ERROR 資料庫連線失敗\n"
+        "2026-07-22T10:00:01 INFO 服務啟動\n"
+        "2026-07-22T10:00:02 CRITICAL 等級不存在",
+        encoding="utf-8",
+    )
+    result = subprocess.run(["logcli", "parse", "--top", "5", log], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert "ERROR: 1" in result.stdout
+
+
+def test_main_in_process(tmp_path, capsys):
+    log = tmp_path / "test.log"
+    log.write_text(
+        "2026-07-22T10:00:00 ERROR 資料庫連線失敗\n"
+        "2026-07-22T10:00:01 INFO 服務啟動\n"
+        "2026-07-22T10:00:02 CRITICAL 等級不存在",
+        encoding="utf-8",
+    )
+    main(["parse", "--top", "5", str(log)])
+    assert capsys.readouterr().out == "ERROR: 1\nINFO: 1\n"

@@ -142,7 +142,16 @@ def extract_fields(log: str) -> LogRecord:
         raise LogParseError(raw=log, reason="timestamp 格式錯誤") from e
 
 
-def main() -> None:  # pragma: no cover
+def show_top_n(counter: Counter[str], top_count: int | None, with_json: bool) -> None:
+    common = counter.most_common(top_count)  # ← 不再自己 count_levels,直接吃傳進來的
+    if with_json:
+        print(json.dumps(common))
+    else:
+        for lvl, count in common:
+            print(f"{lvl}: {count}")
+
+
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="解析錯誤訊息")
     parser.add_argument("-v", "--verbose", action="store_true", help="開 DEBUG log")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -153,7 +162,7 @@ def main() -> None:  # pragma: no cover
     sub_parse.add_argument("--json", action="store_true", help="把統計結果以 JSON 印出來")
     sub_parse.add_argument("--output", type=Path, help="把統計結果寫成報表檔")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     level = args.level
     top_count = args.top
     with_json = args.json
@@ -193,15 +202,6 @@ def main() -> None:  # pragma: no cover
         show_top_n(counter, top_count=top_count, with_json=with_json)  # ← 傳算好的 Counter
 
     logger.info("parse success: %s, failed: %s", success, failed)
-
-
-def show_top_n(counter: Counter[str], top_count: int | None, with_json: bool) -> None:
-    common = counter.most_common(top_count)  # ← 不再自己 count_levels,直接吃傳進來的
-    if with_json:
-        print(json.dumps(common))
-    else:
-        for lvl, count in common:
-            print(f"{lvl}: {count}")
 
 
 if __name__ == "__main__":
