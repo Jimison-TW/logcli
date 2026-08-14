@@ -259,3 +259,15 @@ def test_until_includes_that_whole_day(tmp_path, capsys):
     )
     main(["parse", "--until", "2026-08-14", "--top", "5", str(log)])
     assert capsys.readouterr().out == "ERROR: 1\n"
+
+
+def test_since_includes_that_whole_day(tmp_path, capsys):
+    """--since 2026-08-14 的規格:含 08-14 整天、排 08-13 以前。"""
+    log = tmp_path / "test.log"
+    log.write_text(
+        "2026-08-13T23:59:00 ERROR 當天最後一刻\n"  # 界外:前一天最後一分鐘 → 期望【排除】
+        "2026-08-14T00:00:00 WARN 隔天第一刻\n",  # 界內:當天第一秒 → 期望【留】
+        encoding="utf-8",
+    )
+    main(["parse", "--since", "2026-08-14", "--top", "5", str(log)])
+    assert capsys.readouterr().out == "WARN: 1\n"
