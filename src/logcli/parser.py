@@ -5,7 +5,7 @@ import logging
 import re
 from collections import Counter
 from collections.abc import Iterable, Iterator
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TypeIs, get_args
 
@@ -151,6 +151,10 @@ def show_top_n(counter: Counter[str], top_count: int | None, with_json: bool) ->
             print(f"{lvl}: {count}")
 
 
+def parse_date(s: str) -> datetime:
+    return datetime.fromisoformat(s)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="解析錯誤訊息")
     parser.add_argument("-v", "--verbose", action="store_true", help="開 DEBUG log")
@@ -161,12 +165,18 @@ def main(argv: list[str] | None = None) -> None:
     sub_parse.add_argument("--top", type=int, help="顯示最常見的前 N 個")
     sub_parse.add_argument("--json", action="store_true", help="把統計結果以 JSON 印出來")
     sub_parse.add_argument("--output", type=Path, help="把統計結果寫成報表檔")
+    sub_parse.add_argument("--since", type=parse_date, help="log搜尋參數的起始時間")
+    sub_parse.add_argument("--until", type=parse_date, help="log搜尋參數的結束時間")
 
     args = parser.parse_args(argv)
     level = args.level
     top_count = args.top
     with_json = args.json
     out_path: Path | None = args.output
+    since: datetime | None = args.since
+    until: datetime | None = args.until
+    if until is not None:
+        until = until + timedelta(days=1)
     setup_logging(verbose=args.verbose)
 
     # ⭐ 單次掃描:一個迴圈同時「數等級」+「parse」,generator 只抽一次
@@ -174,11 +184,14 @@ def main(argv: list[str] | None = None) -> None:
     success = 0
     failed = 0
     for line in read_lines_streaming(args.file):  # ← 讀的是 args.file 不是 out_path
-        lvl = extract_level(line)
-        if lvl is not None:
-            counter[lvl] += 1
         try:
             record = parse_line(line)
+            if since is not None and record.timestamp < since:
+                continue
+            if until is not None and record.timestamp >= until:
+                continue
+            if record.level is not None:
+                counter[record.level] += 1
             if level is not None and record.level != level:
                 continue
             logger.debug("%s", record)
