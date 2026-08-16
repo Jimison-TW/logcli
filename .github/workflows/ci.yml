@@ -1,0 +1,60 @@
+# GitHub Actions CI — push / PR 時自動跑品質檢查
+#
+# 前端類比:這就是 GitHub 版的 Jenkins / GitLab CI / CircleCI。
+# 結構跟你熟的一樣:事件觸發(on) → 工作(jobs) → 步驟(steps)。
+#
+# 檔案位置是「約定大於設定」:必須放在 .github/workflows/*.yml,GitHub 才會認。
+
+name: CI
+
+# ── 什麼時候跑 ──────────────────────────────────────────────
+# push:         直接推到 main 時跑(保護主線)
+# pull_request: 對著 main 開 PR 時跑(合併前就先擋下問題 ← PR 流程的重點)
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: lint + typecheck + test
+    runs-on: ubuntu-latest # ⭐ 注意:本機是 Windows,CI 是 Linux → 跨平台問題會在這裡現形
+
+    steps:
+      # ① 把 repo 抓下來(不做這步,runner 上是空的)
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ② 裝 uv;enable-cache 讓下次跑直接吃快取,不用重抓套件
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      # ③ 依 uv.lock 還原「完全一樣」的依賴版本
+      #    ⭐ --locked = 若 uv.lock 與 pyproject.toml 不同步就直接失敗,
+      #       等同前端的 `npm ci`(而不是 `npm install`)——CI 要的是可重現,不是最新
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # ④ Lint:未使用的 import、import 排序、pycodestyle 錯誤
+      - name: Lint (ruff check)
+        run: uv run ruff check .
+
+      # ⑤ 格式:--check 只檢查不改檔(≈ prettier --check)
+      #    CI 的職責是「擋下不合格的」,不是「順手幫你改」——改了也沒人 commit
+      - name: Format (ruff format --check)
+        run: uv run ruff format --check .
+
+      # ⑥ 型別檢查(≈ tsc --noEmit)。tests 也要檢查:
+      #    ⭐ Day14 學到 mypy 對「完全沒型別註記的函式」預設跳過不檢查,
+      #       所以 tests/ 一直是盲區 → 明確列進來
+      - name: Type check (mypy)
+        run: uv run mypy src tests
+
+      # ⑦ 測試 + 覆蓋率門檻
+      #    ⭐ --cov-fail-under=85:覆蓋率掉到 85% 以下就讓 CI 紅
+      #       (現況 92%,留 7% 緩衝。門檻太緊會逼人關掉它,那就白設了)
+      - name: Test (pytest + coverage gate)
+        run: uv run pytest --cov-fail-under=85
