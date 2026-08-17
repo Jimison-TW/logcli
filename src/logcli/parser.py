@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import TypeIs, get_args
 
 from openpyxl import Workbook
+from rich.console import Console
+from rich.table import Table
 
 from .logging_config import setup_logging
 from .models import Level, LogRecord
@@ -142,17 +144,35 @@ def extract_fields(log: str) -> LogRecord:
         raise LogParseError(raw=log, reason="timestamp 格式錯誤") from e
 
 
-def show_top_n(counter: Counter[str], top_count: int | None, with_json: bool) -> None:
+def show_top_n(
+    counter: Counter[str], top_count: int | None, with_json: bool, fmt: str = "text"
+) -> None:
     common = counter.most_common(top_count)  # ← 不再自己 count_levels,直接吃傳進來的
     if with_json:
         print(json.dumps(common))
     else:
-        for lvl, count in common:
-            print(f"{lvl}: {count}")
+        if fmt == "table":
+            render_table(common)
+        else:
+            for lvl, count in common:
+                print(f"{lvl}: {count}")
 
 
 def parse_date(s: str) -> datetime:
     return datetime.fromisoformat(s)
+
+
+def render_table(data: list[tuple[str, int]]) -> None:
+    console = Console()  # 輸出驅動(≈ 懂顏色/表格的 stdout 包裝)
+
+    table = Table(title="Log 等級統計")
+    table.add_column("level", style="cyan")
+    table.add_column("count", justify="right", style="magenta")  # 數字靠右對齊
+
+    for lvl, count in data:
+        table.add_row(lvl, str(count))
+
+    console.print(table)  # 用 console.print,不是內建 print
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -167,6 +187,9 @@ def main(argv: list[str] | None = None) -> None:
     sub_parse.add_argument("--output", type=Path, help="把統計結果寫成報表檔")
     sub_parse.add_argument("--since", type=parse_date, help="log搜尋參數的起始時間")
     sub_parse.add_argument("--until", type=parse_date, help="log搜尋參數的結束時間")
+    sub_parse.add_argument(
+        "--format", choices=["text", "table"], default="text", help="輸出格式(預設 text)"
+    )
 
     args = parser.parse_args(argv)
     level = args.level
@@ -175,6 +198,8 @@ def main(argv: list[str] | None = None) -> None:
     out_path: Path | None = args.output
     since: datetime | None = args.since
     until: datetime | None = args.until
+    fmt: str = args.format
+
     if until is not None:
         until = until + timedelta(days=1)
     setup_logging(verbose=args.verbose)
@@ -211,8 +236,8 @@ def main(argv: list[str] | None = None) -> None:
         else:
             raise ValueError(f"不支援的輸出格式:{out_path.suffix}(只支援 .csv / .xlsx)")
 
-    if top_count is not None or with_json:
-        show_top_n(counter, top_count=top_count, with_json=with_json)  # ← 傳算好的 Counter
+    if top_count is not None or with_json or fmt == "table":
+        show_top_n(counter, top_count=top_count, with_json=with_json, fmt=fmt)  # ← 傳算好的 Counter
 
     logger.info("parse success: %s, failed: %s", success, failed)
 

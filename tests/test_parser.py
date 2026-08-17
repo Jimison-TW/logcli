@@ -192,6 +192,19 @@ def test_show_top_n_plain(capsys):
     assert captured.out == "ERROR: 2\n" + "WARN: 1\n"  # ← 你來填
 
 
+def test_show_top_n_table(capsys):
+    # rows = [
+    #     "2026-07-22T10:00:00 ERROR 資料庫連線失敗",
+    #     "2026-07-22T10:00:00 ERROR 磁碟寫入失敗",
+    #     "2026-07-22T10:00:00 WARN 記憶體偏高",
+    # ]
+    counter = Counter({"ERROR": 2, "WARN": 1})
+    show_top_n(counter, top_count=None, with_json=False, fmt="table")
+    captured = capsys.readouterr()
+    assert "ERROR" in captured.out
+    assert "level" in captured.out
+
+
 def test_show_top_n_json(capsys):
     counter = Counter({"ERROR": 1})
     show_top_n(counter, top_count=None, with_json=True)
