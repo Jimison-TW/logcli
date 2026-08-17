@@ -8,6 +8,8 @@
 - `--level INFO|WARN|ERROR`：只看某個等級
 - `--top N`：顯示最常見的前 N 個等級
 - `--json`：以 JSON 輸出統計結果
+- `--output report.csv|report.xlsx`：把統計結果寫成 CSV / Excel 報表（依副檔名判斷）
+- `--since / --until`：只統計某時間區間內的 log（如 `--since 2026-01-01`）
 - `-v / --verbose`：開 DEBUG log
 
 ## 安裝
@@ -21,8 +23,3 @@ pip install -e .
 ```bash
 pytest -v
 ```
-
-## 技術筆記
-
-- [前端轉 Python 的 6 個工程化差異（W1）](../docs/W1技術筆記.md)
-- [測試覆蓋率——數字不是重點，盲區才是（W2）](../docs/W2技術筆記-測試覆蓋率.md)
