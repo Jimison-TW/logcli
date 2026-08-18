@@ -37,7 +37,11 @@ src = ["src"]              # 告訴 ruff 套件在 src/ 底下，import 排序�
 select = ["E", "F", "I"]   # E=pycodestyle 錯誤, F=pyflakes(未使用變數/import), I=isort(import 排序)
 
 [tool.pytest.ini_options]
-addopts = "--cov=logcli --cov-branch --cov-report=term-missing"
+addopts = "--cov=logcli --cov-branch --cov-report=term-missing --strict-markers"
+markers = [
+    "smoke: 核心流程快測,每次 push 跑",
+    "regression: 回歸測試，邊界 / 例外 / 格式變體的測試",
+]
 
 [tool.coverage.report]
 exclude_also = [

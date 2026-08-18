@@ -226,6 +226,7 @@ def test_setup_logging_verbose():
         root.handlers[:] = original  # ③ 還原:不管測試過不過都復原,不污染其他測試
 
 
+@pytest.mark.smoke
 def test_cli_end_to_end(make_test_case):
     # log = tmp_path / "test.log"
     # log.write_text(
@@ -250,6 +251,7 @@ def test_cli_end_to_end(make_test_case):
     assert "ERROR: 1" in result.stdout
 
 
+@pytest.mark.smoke
 def test_main_in_process(make_test_case, capsys):
     # log = tmp_path / "test.log"
     # log.write_text(
