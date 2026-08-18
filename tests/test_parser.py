@@ -234,11 +234,13 @@ def test_cli_end_to_end(make_test_case):
     #     "2026-07-22T10:00:02 CRITICAL 等級不存在",
     #     encoding="utf-8",
     # )
-    # result = subprocess.run(["logcli", "parse", "--top", "5", log], capture_output=True, text=True)
+    # result = subprocess.run(["logcli", "parse", "--top", "5", log],
+    # capture_output=True, text=True)
     # assert result.returncode == 0
     # assert "ERROR: 1" in result.stdout
 
     case = make_test_case(
+        "cli_end_to_end",
         "2026-07-22T10:00:00 ERROR 資料庫連線失敗\n"
         "2026-07-22T10:00:01 INFO 服務啟動\n"
         "2026-07-22T10:00:02 CRITICAL 等級不存在",
@@ -248,37 +250,53 @@ def test_cli_end_to_end(make_test_case):
     assert "ERROR: 1" in result.stdout
 
 
-def test_main_in_process(tmp_path, capsys):
-    log = tmp_path / "test.log"
-    log.write_text(
+def test_main_in_process(make_test_case, capsys):
+    # log = tmp_path / "test.log"
+    # log.write_text(
+    #     "2026-07-22T10:00:00 ERROR 資料庫連線失敗\n"
+    #     "2026-07-22T10:00:01 INFO 服務啟動\n"
+    #     "2026-07-22T10:00:02 CRITICAL 等級不存在",
+    #     encoding="utf-8",
+    # )
+    case = make_test_case(
+        "main_in_process",
         "2026-07-22T10:00:00 ERROR 資料庫連線失敗\n"
         "2026-07-22T10:00:01 INFO 服務啟動\n"
         "2026-07-22T10:00:02 CRITICAL 等級不存在",
-        encoding="utf-8",
     )
-    main(["parse", "--top", "5", str(log)])
+    main(["parse", "--top", "5", str(case)])
     assert capsys.readouterr().out == "ERROR: 1\nINFO: 1\n"
 
 
-def test_until_includes_that_whole_day(tmp_path, capsys):
+def test_until_includes_that_whole_day(make_test_case, capsys):
     """--until 2026-08-14 的規格:含 08-14 整天、排 08-15 起。"""
-    log = tmp_path / "test.log"
-    log.write_text(
+    # log = tmp_path / "test.log"
+    # log.write_text(
+    #     "2026-08-14T23:59:00 ERROR 當天最後一刻\n"  # 界內:當天最後一秒 → 期望【留】
+    #     "2026-08-15T00:00:00 WARN 隔天第一刻\n",  # 界外:隔天第一秒 → 期望【排】
+    #     encoding="utf-8",
+    # )
+    case = make_test_case(
+        "until_includes_that_whole_day",
         "2026-08-14T23:59:00 ERROR 當天最後一刻\n"  # 界內:當天最後一秒 → 期望【留】
         "2026-08-15T00:00:00 WARN 隔天第一刻\n",  # 界外:隔天第一秒 → 期望【排】
-        encoding="utf-8",
     )
-    main(["parse", "--until", "2026-08-14", "--top", "5", str(log)])
+    main(["parse", "--until", "2026-08-14", "--top", "5", str(case)])
     assert capsys.readouterr().out == "ERROR: 1\n"
 
 
-def test_since_includes_that_whole_day(tmp_path, capsys):
+def test_since_includes_that_whole_day(make_test_case, capsys):
     """--since 2026-08-14 的規格:含 08-14 整天、排 08-13 以前。"""
-    log = tmp_path / "test.log"
-    log.write_text(
+    # log = tmp_path / "test.log"
+    # log.write_text(
+    #     "2026-08-13T23:59:00 ERROR 當天最後一刻\n"  # 界外:前一天最後一分鐘 → 期望【排除】
+    #     "2026-08-14T00:00:00 WARN 隔天第一刻\n",  # 界內:當天第一秒 → 期望【留】
+    #     encoding="utf-8",
+    # )
+    case = make_test_case(
+        "since_includes_that_whole_day",
         "2026-08-13T23:59:00 ERROR 當天最後一刻\n"  # 界外:前一天最後一分鐘 → 期望【排除】
         "2026-08-14T00:00:00 WARN 隔天第一刻\n",  # 界內:當天第一秒 → 期望【留】
-        encoding="utf-8",
     )
-    main(["parse", "--since", "2026-08-14", "--top", "5", str(log)])
+    main(["parse", "--since", "2026-08-14", "--top", "5", str(case)])
     assert capsys.readouterr().out == "WARN: 1\n"

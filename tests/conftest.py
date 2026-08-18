@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -15,12 +16,11 @@ def sample_log_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def make_test_case(tmp_path: Path):
-    log = tmp_path / "test.log"
-
-    def _make(test_content):  # ← 內部函式，收參數
+def make_test_case(tmp_path: Path) -> Callable[[str, str], Path]:
+    def _make(title: str, content: str) -> Path:  # ← 內部函式，收參數
+        log = tmp_path / f"{title}.log"
         log.write_text(
-            test_content,
+            content,
             encoding="utf-8",
         )
         return log
