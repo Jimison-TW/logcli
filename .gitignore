@@ -14,3 +14,7 @@ __pycache__/
 # coverage 產物
 .coverage
 htmlcov/
+
+# pytest-html 產物
+report.html
+assets/
